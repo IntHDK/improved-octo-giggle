@@ -18,4 +18,8 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\improved-octo-giggle-DatacenterInterface\improved-octo-giggle-DatacenterInterface.csproj" />
+  </ItemGroup>
+
 </Project>
