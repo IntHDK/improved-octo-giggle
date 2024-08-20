@@ -32,4 +32,11 @@ namespace WebReactApp.Server.ModelObjects.Identity
         public DateTime CreatedTime { get; set; }
         public RoleType Role { get; set; }
     }
+    public enum RoleType
+    {
+        None,
+        Suspended,
+        Admin,
+        Master
+    }
 }

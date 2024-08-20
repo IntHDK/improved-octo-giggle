@@ -7,6 +7,8 @@ import path from 'path';
 import child_process from 'child_process';
 import { env } from 'process';
 
+//ASP.NET Core 자동생성된 설정형태. 배포시 배포 환경에 따라 조정할 필요.
+
 const baseFolder =
     env.APPDATA !== undefined && env.APPDATA !== ''
         ? `${env.APPDATA}/ASP.NET/https`

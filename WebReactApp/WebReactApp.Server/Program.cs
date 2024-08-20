@@ -8,6 +8,7 @@ using System.Security.Claims;
 using WebReactApp.Server.Data;
 using WebReactApp.Server.Services.Authentication;
 using WebReactApp.Server.Services.IdentityService;
+using WebReactApp.Server.Services.MessageChannel;
 
 namespace WebReactApp.Server
 {
@@ -59,6 +60,7 @@ namespace WebReactApp.Server
                 configure.BearerTokenExpiration = TimeSpan.FromDays(1);
             });
             builder.Services.AddSingleton<IdentityTokenSingleton>();
+            builder.Services.AddSingleton<MessageChannelSingleton>();
             builder.Services.AddScoped<IdentityService>();
 
             builder.Services.AddHttpContextAccessor();
@@ -78,6 +80,10 @@ namespace WebReactApp.Server
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseWebSockets(new WebSocketOptions
+            {
+                KeepAliveInterval = TimeSpan.FromDays(1)
+            });
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
 

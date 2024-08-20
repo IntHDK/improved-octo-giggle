@@ -30,11 +30,10 @@ namespace WebReactApp.Server.Services.Authentication
             string token = Request
                 .Headers[Options.TokenHeaderName]!;
             var claims = new List<Claim>();
-            //TODO: Token check
 
             if (identityService.CheckAppToken(token, out var accinfo, out _))
             {
-                //TODO: Claims
+                //Claims
                 claims.Add(new Claim("AccountID", accinfo.ID.ToString()));
                 claims.Add(new Claim("NickName", accinfo.NickName));
             }
