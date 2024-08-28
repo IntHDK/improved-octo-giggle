@@ -24,6 +24,7 @@ namespace WebReactApp.Server.Controllers.Identity
         public class PostRegisterIDPWRequest
         {
             [Required] public string Username { get; set; }
+            [Required] public string Nickname { get; set; }
             [Required] public string Email { get; set; }
             [Required] public string Password { get; set; }
         }
@@ -36,13 +37,13 @@ namespace WebReactApp.Server.Controllers.Identity
         {
             if (request != null && identityService != null)
             {
-                if (identityService.CreateAccount(request.Username, request.Email, out var newaccinfo))
+                if (identityService.CreateAccount(request.Nickname, request.Email, out var newaccinfo))
                 {
-                    Console.WriteLine(string.Format("createaccount true: {0}", newaccinfo.UserName));
+                    Console.WriteLine(string.Format("createaccount true: {0}", newaccinfo.NickName));
 #if DEBUG
                     if (identityService.ConfirmAccountManual(newaccinfo.AccountID, true))
                     {
-                        Console.WriteLine(string.Format("confirmaccountmanual true: {0}", newaccinfo.UserName));
+                        Console.WriteLine(string.Format("confirmaccountmanual true: {0}", newaccinfo.NickName));
                         if (identityService.AddLoginMethodUsernamePassword(newaccinfo.AccountID, request.Username, request.Password))
                         {
                             return new PostRegisterIDPWResponse
@@ -52,7 +53,8 @@ namespace WebReactApp.Server.Controllers.Identity
                         }
                         else
                         {
-                            Console.WriteLine(string.Format("addmethod false: {0}", newaccinfo.UserName));
+                            identityService.RemoveAccount(newaccinfo.AccountID); //생성롤백
+                            Console.WriteLine(string.Format("addmethod false: {0}", newaccinfo.NickName));
                         }
                     }
 #else
@@ -63,6 +65,18 @@ namespace WebReactApp.Server.Controllers.Identity
             return new PostRegisterIDPWResponse
             {
                 IsSuccess = false
+            };
+        }
+        public class GetRegisterIDPWIsAvailableUsernameResponse
+        {
+            public bool IsAvailable { get; set; }
+        }
+        [HttpGet("register/idpw/isavailableusername/{username}")]
+        public GetRegisterIDPWIsAvailableUsernameResponse GetRegisterIDPWIsAvailableUsername(string username)
+        {
+            return new GetRegisterIDPWIsAvailableUsernameResponse()
+            {
+                IsAvailable = !identityService.CheckIsExistUsernameLoginMethodUsernamePassword(username)
             };
         }
 

@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import { forwardRef, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { PostLogin } from '../utils/identityrequest';
 
 const LoginPageComponent = forwardRef(function LoginedStatusComponent(props, ref) {
     const [loginInputUsername, setLoginInputUsername] = useState('');
@@ -14,33 +15,13 @@ const LoginPageComponent = forwardRef(function LoginedStatusComponent(props, ref
     }
 
     async function postLogin(loginusername, loginpassword) {
-        var response;
-        var data;
-        try {
-            response = await fetch('/api/identity/login/idpw', {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    Username: loginusername,
-                    Password: loginpassword
-                }),
-            });
-            if (!response.ok) {
-                console.log(response);
-                throw new Error();
+        var data = PostLogin(loginusername, loginpassword);
+
+        if (data != null) {
+            if (data.isSuccess) {
+                props.loginnotifier(data.token, data.expireAt);
+                navigate(redirecturl);
             }
-            data = await response.json();
-            console.log(data);
-
-        } catch {
-            console.log("bad");
-        }
-
-        if (data.isSuccess) {
-            props.loginnotifier(data.token, data.expireAt);
-            navigate(redirecturl);
         }
     }
     function checkLoginStatusData(loginstatus) {
@@ -64,7 +45,7 @@ const LoginPageComponent = forwardRef(function LoginedStatusComponent(props, ref
     }
     const registerHandler = () => {
         navigate({
-            pathname: 'register',
+            pathname: '/register',
             search: searchParams.toString()
         });
     }

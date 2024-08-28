@@ -3,7 +3,7 @@ using WebReactApp.Server.ModelObjects.Identity.LoginMethod;
 
 namespace WebReactApp.Server.ModelObjects.Identity
 {
-    [Index(nameof(Email), IsUnique = true)]
+    [Index(nameof(Email))]
     public class Account
     {
         public Guid ID { get; set; }

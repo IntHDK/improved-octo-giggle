@@ -68,20 +68,22 @@ namespace WebReactApp.Server.Services.IdentityService
             }
             return appDbContext.Accounts.Where(a => a.Email == email).Count() > 0;
         }
-        public bool CreateAccount(string username, string email, out IdentityManagerAccountInformation accountInformation)
-        {
+        public bool CreateAccount(string nickname, string email, out IdentityManagerAccountInformation accountInformation)
+        {            
             accountInformation = null;
+            /*
             if (IsThereAccountWithEmail(email))
             {
                 return false;
             }
+            */
             accountInformation = new IdentityManagerAccountInformation();
             if (appDbContext != null)
             {
                 Account newaccount = new Account
                 {
                     CreatedTime = DateTime.UtcNow,
-                    NickName = username,
+                    NickName = nickname,
                     Email = email,
                     IsConfirmed = false,
                     Roles = []
@@ -96,10 +98,30 @@ namespace WebReactApp.Server.Services.IdentityService
                     return false;
                 }
                 accountInformation.AccountID = newaccount.ID;
-                accountInformation.UserName = newaccount.NickName;
+                accountInformation.NickName = newaccount.NickName;
                 accountInformation.RoleTags = new List<RoleType>();
 
                 return true;
+            }
+            return false;
+        }
+        public bool RemoveAccount(Guid AccountID)
+        {
+            if (appDbContext != null)
+            {
+                try
+                {
+                    Account account = appDbContext.Accounts.Find(AccountID);
+                    if (account != null) {
+                        appDbContext.Accounts.Remove(account);
+                        appDbContext.SaveChanges();
+                    }
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
             }
             return false;
         }
@@ -126,6 +148,17 @@ namespace WebReactApp.Server.Services.IdentityService
                 }
             }
             return false;
+        }
+        public bool CheckIsExistUsernameLoginMethodUsernamePassword(string username)
+        {
+            if (appDbContext != null)
+            {
+                return appDbContext.UsernamePasswordMethods.Where(m => m.UserName == username).Any();
+            }
+            else
+            {
+                return true;
+            }
         }
         public bool AddLoginMethodUsernamePassword(Guid accountID, string username, string password)
         {

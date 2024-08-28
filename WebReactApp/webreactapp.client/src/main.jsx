@@ -5,6 +5,7 @@ import HeaderComponent from './component/headercomponent.jsx';
 import LoginPageComponent from './page/loginpagecomponent.jsx';
 import LogoutPageComponent from './page/logoutpagecomponent.jsx';
 import MainPageComponent from './page/mainpagecomponent.jsx';
+import RegisterIDPWPageComponent from './page/registeridpwpagecomponent.jsx';
 
 function App() {
     const [currentLoginStatus, setCurrentLoginStatus] = useState({
@@ -45,7 +46,7 @@ function App() {
                 <Routes>
                     <Route path="/login" element={<LoginPageComponent loginstatuschecker={loginchecker} loginnotifier={loginnotifier} ref={currentLoginStatus} />}></Route>
                     <Route path="/logout" element={<LogoutPageComponent loginstatuschecker={loginchecker} logoutnotifier={logoutnotifier} ref={currentLoginStatus} />}></Route>
-                    <Route path="/register" element={<LoginPageComponent />}></Route>
+                    <Route path="/register" element={<RegisterIDPWPageComponent loginstatuschecker={loginchecker} loginnotifier={loginnotifier} ref={currentLoginStatus} />}></Route>
                     <Route path="/" element={<MainPageComponent />}></Route>
                     <Route path="*" element={<MainPageComponent />}></Route>
                 </Routes>

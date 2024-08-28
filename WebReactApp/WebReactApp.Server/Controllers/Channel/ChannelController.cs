@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Net.WebSockets;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Text.Json;
 using WebReactApp.Server.Services.MessageChannel;
 
 namespace WebReactApp.Server.Controllers.Channel
@@ -24,6 +25,7 @@ namespace WebReactApp.Server.Controllers.Channel
 
         public class ChannelWSListenerQueue
         {
+            private Guid ID { get; set; } = Guid.NewGuid();
             public string Owner { get; set; }
             public string ChannelName { get; set; }
             public Queue<MessageChannelSingleton.Message> RecvMessages { get; set; } = new Queue<MessageChannelSingleton.Message>();
@@ -31,34 +33,47 @@ namespace WebReactApp.Server.Controllers.Channel
             public WebSocket WS { get; set; }
             public MessageChannelSingleton MSGChannelSingleton { get; set; }
             public bool IsAlive { get; set; } = true;
+            private CancellationTokenSource disconnectioncontrolfromsingleton = new CancellationTokenSource();
 
             public void RecvFromWSClient()
             {
                 var buffer = new byte[1024 * 4];
-                var receiveTask = WS.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                receiveTask.Wait();
-                var receiveResult = receiveTask.Result;
-
-                while (!receiveResult.CloseStatus.HasValue)
+                Task<WebSocketReceiveResult>? receiveTask = null;
+                WebSocketReceiveResult? receiveResult = null;
+                try
                 {
-                    string msg = Encoding.UTF8.GetString(buffer, 0, receiveResult.Count);
-                    RecvMessages.Enqueue(new MessageChannelSingleton.Message()
-                    {
-                        CreateTime = DateTime.UtcNow,
-                        Owner = Owner,
-                        Text = msg
-                    });
-
-                    receiveTask = WS.ReceiveAsync(
-                        new ArraySegment<byte>(buffer), CancellationToken.None);
+                    receiveTask = WS.ReceiveAsync(new ArraySegment<byte>(buffer), disconnectioncontrolfromsingleton.Token);
                     receiveTask.Wait();
                     receiveResult = receiveTask.Result;
                 }
+                catch
+                {
+                }
 
-                WS.CloseAsync(
-                    receiveResult.CloseStatus.Value,
-                    receiveResult.CloseStatusDescription,
-                    CancellationToken.None).Wait();
+                if (receiveResult != null && receiveTask != null)
+                {
+                    while (!receiveTask.IsCanceled && !receiveResult.CloseStatus.HasValue && !disconnectioncontrolfromsingleton.Token.IsCancellationRequested)
+                    {
+                        string msg = Encoding.UTF8.GetString(buffer, 0, receiveResult.Count);
+                        RecvMessages.Enqueue(new MessageChannelSingleton.Message()
+                        {
+                            CreateTime = DateTime.UtcNow,
+                            Owner = Owner,
+                            Text = msg
+                        });
+
+                        receiveTask = WS.ReceiveAsync(
+                            new ArraySegment<byte>(buffer), disconnectioncontrolfromsingleton.Token);
+                        receiveTask.Wait();
+                        receiveResult = receiveTask.Result;
+                    }
+
+                    WS.CloseAsync(
+                        receiveResult.CloseStatus.Value,
+                        receiveResult.CloseStatusDescription,
+                        CancellationToken.None).Wait();
+                    MSGChannelSingleton.DisconnectChannel(ChannelName, Owner);
+                }
 
                 IsAlive = false;
 
@@ -66,14 +81,16 @@ namespace WebReactApp.Server.Controllers.Channel
             }
             public void SendFromWSServer()
             {
-                while (WS.State == WebSocketState.Open)
+                while (WS.State == WebSocketState.Open && !disconnectioncontrolfromsingleton.Token.IsCancellationRequested)
                 {
                     if (SendMessages.Count == 0)
                     {
                         continue;
                     }
                     var message = SendMessages.Dequeue();
-                    var messagestrline = string.Format("{0}\t{1}\t{2}", message.CreateTime.ToString(DateTimeFormatInfo.InvariantInfo.RFC1123Pattern), message.Owner, message.Text);
+                    //var messagestrline = string.Format("{0}\t{1}\t{2}", message.CreateTime.ToString(DateTimeFormatInfo.InvariantInfo.RFC1123Pattern), message.Owner, message.Text);
+                    message.MQID = this.ID;
+                    var messagestrline = JsonSerializer.Serialize(message);
                     var buffer = Encoding.UTF8.GetBytes(messagestrline);
                     var seg = new ArraySegment<byte>(buffer, 0, buffer.Length);
                     WS.SendAsync(
@@ -81,6 +98,11 @@ namespace WebReactApp.Server.Controllers.Channel
                         WebSocketMessageType.Text,
                         true,
                         CancellationToken.None).Wait();
+
+                    if (message.ControlType == MessageChannelSingleton.MessageControlType.Disconnection)
+                    {
+                        disconnectioncontrolfromsingleton.Cancel();
+                    }
                 }
 
                 IsAlive = false;
@@ -94,7 +116,7 @@ namespace WebReactApp.Server.Controllers.Channel
             }
             public void SendToChannel()
             {
-                while(IsAlive)
+                while(!disconnectioncontrolfromsingleton.Token.IsCancellationRequested)
                 {
                     if (RecvMessages.Count == 0)
                     {
@@ -103,9 +125,14 @@ namespace WebReactApp.Server.Controllers.Channel
                     var message = RecvMessages.Dequeue();
                     MSGChannelSingleton.SendMessageToChannel(ChannelName, message);
                 }
+
+                IsAlive = false;
+
                 return;
             }
         }
+
+        //Public Channel
         [Authorize]
         [HttpGet("listen/{channelname}")]
         public async Task GetListen(string channelname)
