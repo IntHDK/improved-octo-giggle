@@ -23,6 +23,8 @@ namespace WebReactApp.Server.Controllers.Channel
             this.messageChannelSingleton = messageChannelSingleton;
         }
 
+        //유사 메세지큐 구현을 위한 객체
+        //WS 접근한 클라이언트와 통신하는 인터페이스 역할
         public class ChannelWSListenerQueue
         {
             private Guid ID { get; set; } = Guid.NewGuid();
@@ -48,6 +50,7 @@ namespace WebReactApp.Server.Controllers.Channel
                 }
                 catch
                 {
+                    //TODO: Receive 에러 컨트롤
                 }
 
                 if (receiveResult != null && receiveTask != null)

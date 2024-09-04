@@ -2,7 +2,15 @@
 {
     public class MessageChannelSingleton
     {
+        //서버에서 직접 클라이언트로 메세지 전송해야 할 때 콜백용
         public delegate void MessageListener(Message message);
+
+        /*
+         * 
+         * 기본형 채널
+         * 중복 접속 불가 (Audience의 Name으로 판단)
+         * 전송한 메세지는 모든 참여 Audience로 전송
+         */
         private class Channel
         {
             public const int MAX_RECENT_MESSAGE = 50;

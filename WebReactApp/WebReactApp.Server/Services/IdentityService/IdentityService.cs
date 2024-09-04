@@ -70,13 +70,6 @@ namespace WebReactApp.Server.Services.IdentityService
         }
         public bool CreateAccount(string nickname, string email, out IdentityManagerAccountInformation accountInformation)
         {            
-            accountInformation = null;
-            /*
-            if (IsThereAccountWithEmail(email))
-            {
-                return false;
-            }
-            */
             accountInformation = new IdentityManagerAccountInformation();
             if (appDbContext != null)
             {
@@ -128,12 +121,12 @@ namespace WebReactApp.Server.Services.IdentityService
         public bool MakeAccountConfirmationTicket(Guid accountID, DateTime ExpireAt, out AccountConfirmTicket ticket)
         {
             ticket = null;
-            //TODO
+            //TODO : 이메일로 계정 생성 확인 기능 추가시
             return false;
         }
         public bool ConfirmAccountByTicket(Guid ticketid)
         {
-            //TODO
+            //TODO : 이메일로 계정 생성 확인 기능 추가시
             return false;
         }
         public bool ConfirmAccountManual(Guid accountID, bool confirmStatus)
@@ -149,6 +142,7 @@ namespace WebReactApp.Server.Services.IdentityService
             }
             return false;
         }
+        //username 사용자가 이미 등록되어있는지 체크 (중복체크)
         public bool CheckIsExistUsernameLoginMethodUsernamePassword(string username)
         {
             if (appDbContext != null)
@@ -160,67 +154,65 @@ namespace WebReactApp.Server.Services.IdentityService
                 return true;
             }
         }
+        //username, password로 로그인 가능한 IDPW 로그인 정보를 추가
         public bool AddLoginMethodUsernamePassword(Guid accountID, string username, string password)
         {
             if (appDbContext != null)
             {
-                using (var trx = appDbContext.Database.BeginTransaction())
+                try
                 {
-                    try
+                    var curacc = appDbContext.Accounts.Include(a => a.UsernamePasswordMethod).Where(a => a.ID.Equals(accountID)).FirstOrDefault();
+                    if (curacc != null)
                     {
-                        var curacc = appDbContext.Accounts.Include(a => a.UsernamePasswordMethod).Where(a => a.ID.Equals(accountID)).FirstOrDefault();
-                        if (curacc != null)
-                        {
-                            if (IdentityPasswordCrypt.HashPassword(password,
-                                out PasswordHashMethod hashmethod,
-                                out byte[] hashedpassword,
-                                out int itr,
-                                out byte[] passwordsalt,
-                                out int saltsize,
-                                out KeyDerivationPrf prf)){
+                        if (IdentityPasswordCrypt.HashPassword(password,
+                            out PasswordHashMethod hashmethod,
+                            out byte[] hashedpassword,
+                            out int itr,
+                            out byte[] passwordsalt,
+                            out int saltsize,
+                            out KeyDerivationPrf prf)){
 
-                                if (curacc.UsernamePasswordMethod == null)
+                            if (curacc.UsernamePasswordMethod == null)
+                            {
+                                curacc.UsernamePasswordMethod = new UsernamePasswordMethod
                                 {
-                                    curacc.UsernamePasswordMethod = new UsernamePasswordMethod
-                                    {
-                                        Account = curacc,
-                                        AccountID = curacc.ID,
-                                        CreatedTime = DateTime.UtcNow,
-                                        PasswordHash = hashedpassword,
-                                        PasswordItr = itr,
-                                        PasswordMethod = hashmethod,
-                                        PasswordPrf = prf,
-                                        PasswordSalt = passwordsalt,
-                                        PasswordSaltLength = saltsize,
-                                        UserName = username
-                                    };
-                                }
-                                else
-                                {
-                                    curacc.UsernamePasswordMethod.CreatedTime = DateTime.UtcNow;
-                                    curacc.UsernamePasswordMethod.UserName = username;
-                                    curacc.UsernamePasswordMethod.PasswordMethod = hashmethod;
-                                    curacc.UsernamePasswordMethod.PasswordSalt = passwordsalt;
-                                    curacc.UsernamePasswordMethod.PasswordSaltLength = saltsize;
-                                    curacc.UsernamePasswordMethod.PasswordPrf = prf;
-                                    curacc.UsernamePasswordMethod.PasswordHash = hashedpassword;
-                                    curacc.UsernamePasswordMethod.PasswordItr = itr;
-                                }
-                                
-                                appDbContext.SaveChanges();
-                                trx.Commit();
-                                return true;
+                                    Account = curacc,
+                                    AccountID = curacc.ID,
+                                    CreatedTime = DateTime.UtcNow,
+                                    PasswordHash = hashedpassword,
+                                    PasswordItr = itr,
+                                    PasswordMethod = hashmethod,
+                                    PasswordPrf = prf,
+                                    PasswordSalt = passwordsalt,
+                                    PasswordSaltLength = saltsize,
+                                    UserName = username
+                                };
                             }
+                            else
+                            {
+                                curacc.UsernamePasswordMethod.CreatedTime = DateTime.UtcNow;
+                                curacc.UsernamePasswordMethod.UserName = username;
+                                curacc.UsernamePasswordMethod.PasswordMethod = hashmethod;
+                                curacc.UsernamePasswordMethod.PasswordSalt = passwordsalt;
+                                curacc.UsernamePasswordMethod.PasswordSaltLength = saltsize;
+                                curacc.UsernamePasswordMethod.PasswordPrf = prf;
+                                curacc.UsernamePasswordMethod.PasswordHash = hashedpassword;
+                                curacc.UsernamePasswordMethod.PasswordItr = itr;
+                            }
+                                
+                            appDbContext.SaveChanges();
+                            return true;
                         }
                     }
-                    catch
-                    {
-                        return false;
-                    }
+                }
+                catch
+                {
+                    return false;
                 }
             }
             return false;
         }
+        //username, password로 패스워드 검증
         public bool LoginWithMethodUsernamePassword(string username, string password,
             out Account account, out SessionToken sessiontoken)
         {
@@ -254,6 +246,8 @@ namespace WebReactApp.Server.Services.IdentityService
             return false;
         }
 
+        //사용자 권한 추가
+        //TODO: 중복되는 권한은 추가 안되도록 제어
         public bool AddRole(Guid accountID, List<RoleType> roles)
         {
             if (appDbContext != null)
@@ -276,6 +270,7 @@ namespace WebReactApp.Server.Services.IdentityService
             return false;
         }
 
+        //토큰 체크 로직 (컨트롤러에서 직접 쓰는거보다 미들웨어에서)
         public bool CheckAppToken(string appToken, out Account account, out SessionToken sessiontoken)
         {
             account = null;

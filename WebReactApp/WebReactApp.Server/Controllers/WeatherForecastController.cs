@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace WebReactApp.Server.Controllers
 {
+    //TODO: 프로젝트 기본 템플릿에 들어있는 API, 헬스체크용으로 남겨뒀지만 차후 제거해야함
     [ApiController]
     [Route("api/weatherforecast")]
     public class WeatherForecastController : ControllerBase

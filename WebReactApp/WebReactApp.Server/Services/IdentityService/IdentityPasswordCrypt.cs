@@ -7,9 +7,8 @@ namespace WebReactApp.Server.Services.IdentityService
 {
     public class IdentityPasswordCrypt
     {
-        /* =======================
+        /*
             * PBKDF2 with HMAC-SHA512, 128-bit salt, 256-bit subkey, 100000 iterations.
-            * (All UInt32s are stored big-endian.)
         */
         private const int _saltsize = 128 / 8;
         private const int _itercount = 100000;

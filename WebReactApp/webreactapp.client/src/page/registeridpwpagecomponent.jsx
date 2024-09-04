@@ -57,7 +57,7 @@ const RegisterIDPWPageComponent = forwardRef(function RegisterPageComponent(prop
                     }
                 });
             } else {
-                setRecentError('사용할 수 없는 username입니다.');
+                setRecentError('username error');
             }
         });
     }
