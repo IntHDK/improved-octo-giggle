@@ -10,8 +10,18 @@
          * 기본형 채널
          * 중복 접속 불가 (Audience의 Name으로 판단)
          * 전송한 메세지는 모든 참여 Audience로 전송
+         * 
+         * 만약 일방적으로 통신하는 채널이거나 해야한다면 컨트롤러 쪽에서 리스닝 제거 등 조치하고 사용할것
          */
-        private class Channel
+        private interface Channel
+        {
+            public string Name { get; set; }
+            public Dictionary<string, Audience> audiences { get; set; }
+            public void Write(Message message);
+            public List<Message> GetRecentMessages();
+            public void AddAudience(Audience audience);
+        }
+        private class PublicChannel : Channel
         {
             public const int MAX_RECENT_MESSAGE = 50;
             public string Name { get; set; }
@@ -78,7 +88,7 @@
             public string Text { get; set; }
         }
 
-        private Dictionary<string, Channel> _channels { get; set; } = new Dictionary<string, Channel>();
+        private Dictionary<string, PublicChannel> _channels { get; set; } = new Dictionary<string, PublicChannel>();
         private readonly ILogger<MessageChannelSingleton> _logger;
 
         public MessageChannelSingleton(ILogger<MessageChannelSingleton> logger)
@@ -88,11 +98,11 @@
 
         public void ListenChannel(string channelname, string subscribername, MessageListener listener)
         {
-            Channel channel;
+            PublicChannel channel;
             Audience audience;
             if (!_channels.TryGetValue(channelname, out channel))
             {
-                channel = new Channel()
+                channel = new PublicChannel()
                 {
                     Name = channelname,
                 };
@@ -108,14 +118,14 @@
         }
         public void DisconnectChannel(string channelname, string subscribername)
         {
-            if (_channels.TryGetValue(channelname, out Channel channel))
+            if (_channels.TryGetValue(channelname, out PublicChannel channel))
             {
                 channel.audiences.Remove(subscribername);
             }
         }
         public void SendMessageToChannel(string channelname, Message message, MessageControlType messageControlType = MessageControlType.PlainMessage)
         {
-            if (_channels.TryGetValue(channelname, out Channel channel))
+            if (_channels.TryGetValue(channelname, out PublicChannel channel))
             {
                 channel.Write(new Message()
                 {

@@ -137,8 +137,8 @@ namespace WebReactApp.Server.Controllers.Channel
 
         //Public Channel
         [Authorize]
-        [HttpGet("listen/{channelname}")]
-        public async Task GetListen(string channelname)
+        [HttpGet("listen/publicchat/{channelname}")]
+        public async Task GetListenPublicChat(string channelname)
         {
             var claimaccountid = User.Claims.Where(c => c.Type == "AccountID").FirstOrDefault();
             if (claimaccountid == null)
@@ -167,6 +167,50 @@ namespace WebReactApp.Server.Controllers.Channel
                     task_wssend.Wait();
                     task_wsrecv.Wait();
                     task_chansend.Wait();
+                }
+                return;
+            }
+            else
+            {
+                logger.LogInformation("Not a websocket request");
+                HttpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            }
+        }
+
+        //Notice Channel
+        //1분마다 랜덤 숫자를 전송받음
+        [Authorize]
+        [HttpGet("listen/noticechat/minute")]
+        public async Task GetListenNoticeChat()
+        {
+            var channelname = "notice_minutely";
+            var claimaccountid = User.Claims.Where(c => c.Type == "AccountID").FirstOrDefault();
+            if (claimaccountid == null)
+            {
+                HttpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return;
+            }
+            if (HttpContext.WebSockets.IsWebSocketRequest)
+            {
+                using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
+                {
+                    ChannelWSListenerQueue channelListenerQueue = new ChannelWSListenerQueue()
+                    {
+                        Owner = claimaccountid.Value,
+                        ChannelName = channelname,
+                        MSGChannelSingleton = this.messageChannelSingleton,
+                        WS = webSocket
+                    };
+
+                    messageChannelSingleton.ListenChannel(channelname, claimaccountid.Value, channelListenerQueue.RecvFromChannel);
+
+                    //var task_chansend = Task.Run(() => channelListenerQueue.SendToChannel());
+                    //var task_wsrecv = Task.Run(() => channelListenerQueue.RecvFromWSClient());
+                    var task_wssend = Task.Run(() => channelListenerQueue.SendFromWSServer());
+
+                    task_wssend.Wait();
+                    //task_wsrecv.Wait();
+                    //task_chansend.Wait();
                 }
                 return;
             }

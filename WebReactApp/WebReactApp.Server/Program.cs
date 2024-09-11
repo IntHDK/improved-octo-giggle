@@ -9,6 +9,7 @@ using WebReactApp.Server.Data;
 using WebReactApp.Server.Services.Authentication;
 using WebReactApp.Server.Services.IdentityService;
 using WebReactApp.Server.Services.MessageChannel;
+using WebReactApp.Server.Services.TimerTaskService;
 
 namespace WebReactApp.Server
 {
@@ -61,6 +62,7 @@ namespace WebReactApp.Server
             });
             builder.Services.AddSingleton<IdentityTokenSingleton>();
             builder.Services.AddSingleton<MessageChannelSingleton>();
+            builder.Services.AddSingleton<TimerOnOneMinuteTaskSingleton>();
             builder.Services.AddScoped<IdentityService>();
 
             builder.Services.AddHttpContextAccessor();
@@ -89,6 +91,9 @@ namespace WebReactApp.Server
 
             using (var scope = app.Services.CreateScope())
             {
+                //initialize
+                app.Services.GetService<TimerOnOneMinuteTaskSingleton>().Start();
+
                 var dbcontext = scope.ServiceProvider.GetService<AppDbContext>();
                 dbcontext?.Database.Migrate();
 
