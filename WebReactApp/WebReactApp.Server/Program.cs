@@ -89,10 +89,10 @@ namespace WebReactApp.Server
             app.MapControllers();
             app.MapFallbackToFile("/index.html");
 
+            //initialize
+            app.Services.GetService<TimerOnOneMinuteTaskSingleton>().Start();
             using (var scope = app.Services.CreateScope())
             {
-                //initialize
-                app.Services.GetService<TimerOnOneMinuteTaskSingleton>().Start();
 
                 var dbcontext = scope.ServiceProvider.GetService<AppDbContext>();
                 dbcontext?.Database.Migrate();
