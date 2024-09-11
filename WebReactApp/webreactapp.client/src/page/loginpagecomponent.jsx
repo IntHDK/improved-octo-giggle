@@ -15,7 +15,7 @@ const LoginPageComponent = forwardRef(function LoginedStatusComponent(props, ref
     }
 
     async function postLogin(loginusername, loginpassword) {
-        var data = PostLogin(loginusername, loginpassword);
+        var data = await PostLogin(loginusername, loginpassword);
 
         if (data != null) {
             if (data.isSuccess) {
