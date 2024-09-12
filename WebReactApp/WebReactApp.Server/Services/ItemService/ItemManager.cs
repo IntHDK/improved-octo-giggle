@@ -54,8 +54,11 @@ namespace WebReactApp.Server.Services.ItemService
                                 var accent = curacc.AccountItems.Where(i => i.ItemMetaName == accountItem.ItemMetaName && i.ExpireAt == accountItem.ExpireAt).FirstOrDefault();
                                 if (accent != null)
                                 {
-                                    accent.Quantity += accountItem.Quantity; // 메타명과 만료기간이 같으면 Quantity를 증가
-                                    break;
+                                    if (accent.Parameters.Count <= 0)
+                                    {
+                                        accent.Quantity += accountItem.Quantity; // 메타명과 만료기간이 같으면 Quantity를 증가
+                                        break;
+                                    }
                                 }
                             }
                             var newitem = new AccountItem()
