@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using WebReactApp.Server.ModelObjects;
 using WebReactApp.Server.ModelObjects.Identity;
 using WebReactApp.Server.Services.AccountService;
 using WebReactApp.Server.Services.ItemService;
@@ -89,38 +90,10 @@ namespace WebReactApp.Server.Controllers.Items
         }
 
         //TODO: swagger 자동인식 붙여놨더니 class in class 썼을 때 에러생긴다
-        //DB Model을 그대로 붙여썼더니 순환참조로 json 파싱이 불가 주의
-        public class GetItemPostIndexResponse_AccountPost
-        {
-            public Guid ID { get; set; }
-            public DateTime CreatedTime { get; set; }
-            public string Context { get; set; }
-            public DateTime ExpireAt { get; set; }
-            public List<GetItemPostIndexResponse_AccountPostEnclosure> Enclosures { get; set; }
-            public bool IsRead { get; set; }
-            public bool IsEnclosureTaken { get; set; }
-        }
-        public class GetItemPostIndexResponse_AccountPostEnclosure
-        {
-            public Guid ID { get; set; }
-            public DateTime CreatedTime { get; set; }
-            public AccountItemType Type { get; set; }
-            public string ItemMetaName { get; set; }
-            public DateTime ExpireAt { get; set; }
-            public int Quantity { get; set; }
-            public List<GetItemPostIndexResponse_AccountPostEnclosureItemParameter> Parameters { get; set; }
-        }
-        public class GetItemPostIndexResponse_AccountPostEnclosureItemParameter
-        {
-            public Guid ID { get; set; }
-            public string ParamName { get; set; }
-            public int Index { get; set; }
-            public int NumberValue { get; set; }
-            public string StringValue { get; set; }
-        }
+        //DB Model을 그대로 붙여썼더니 순환참조로 json 파싱이 불가 주의 (ignore 되어있는지 확인)
         public class GetItemPostIndexResponse
         {
-            public List<GetItemPostIndexResponse_AccountPost> AccountPosts { get; set; }
+            public List<AccountPost> AccountPosts { get; set; }
         }
         [Authorize]
         [HttpGet("post")]
@@ -135,52 +108,7 @@ namespace WebReactApp.Server.Controllers.Items
                     var postinfo = _itemmanager.GetNotExpiredAccountPostsByAccountID(accguid);
                     if (postinfo != null)
                     {
-                        List<GetItemPostIndexResponse_AccountPost> accountPosts = [];
-                        postinfo.ForEach((p) =>
-                        {
-                            var enclosures = new List<GetItemPostIndexResponse_AccountPostEnclosure>();
-                            if (p.AccountPostenclosure != null)
-                            {
-                                p.AccountPostenclosure.ForEach((e) =>
-                                {
-                                    var parameters = new List<GetItemPostIndexResponse_AccountPostEnclosureItemParameter>();
-                                    if (e.Parameters != null)
-                                    {
-                                        e.Parameters.ForEach((p) =>
-                                        {
-                                            parameters.Add(new GetItemPostIndexResponse_AccountPostEnclosureItemParameter()
-                                            {
-                                                ID = p.ID,
-                                                Index = p.Index,
-                                                NumberValue = p.NumberValue,
-                                                ParamName = p.ParamName,
-                                                StringValue = p.StringValue,
-                                            });
-                                        });
-                                    }
-                                    enclosures.Add(new GetItemPostIndexResponse_AccountPostEnclosure()
-                                    {
-                                        CreatedTime = e.CreatedTime,
-                                        ExpireAt = e.ExpireAt,
-                                        ID = e.ID,
-                                        ItemMetaName = e.ItemMetaName,
-                                        Parameters = parameters,
-                                        Quantity = e.Quantity,
-                                        Type = e.Type,
-                                    });
-                                });
-                            }
-                            accountPosts.Add(new GetItemPostIndexResponse_AccountPost
-                            {
-                                ID = p.ID,
-                                Context = p.Context,
-                                ExpireAt = p.ExpireAt,
-                                CreatedTime = p.CreatedTime,
-                                Enclosures = enclosures,
-                                IsRead = p.IsRead,
-                                IsEnclosureTaken = p.IsEnclosureTaken,
-                            });
-                        });
+                        List<AccountPost> accountPosts = postinfo;
                         return new GetItemPostIndexResponse { AccountPosts = accountPosts };
                     }
                     else
@@ -223,7 +151,10 @@ namespace WebReactApp.Server.Controllers.Items
                                 IsSuccess = false,
                             };
                         }
-
+                        return new PostItemPostOpenResponse()
+                        {
+                            IsSuccess = _itemmanager.MarkAsReadPostByPostID(p.ID),
+                        };
                     }
                 }
                 catch
@@ -235,6 +166,88 @@ namespace WebReactApp.Server.Controllers.Items
                 }
             }
             return new PostItemPostOpenResponse()
+            {
+                IsSuccess = false,
+            };
+        }
+        public class PostItemPostTakeEnclosureRequest
+        {
+            public Guid ID { get; set; }
+        }
+        public class PostItemPostTakeEnclosureResponse
+        {
+            public bool IsSuccess { get; set; }
+        }
+        [Authorize]
+        [HttpPost("post/takeenclosure")]
+        public PostItemPostTakeEnclosureResponse PostItemPostTakeEnclosure(PostItemPostTakeEnclosureRequest p)
+        {
+            var claimaccountid = User.Claims.Where(c => c.Type == "AccountID").FirstOrDefault();
+            if (claimaccountid != null)
+            {
+                try
+                {
+                    var accguid = Guid.Parse(claimaccountid.Value);
+                    var postinfo = _itemmanager.GetPostByPostID(p.ID);
+                    if (postinfo != null)
+                    {
+                        if (postinfo.AccountID != accguid)
+                        {
+                            return new PostItemPostTakeEnclosureResponse()
+                            {
+                                IsSuccess = false,
+                            };
+                        }
+                        return new PostItemPostTakeEnclosureResponse()
+                        {
+                            IsSuccess = _itemmanager.TakeEnclosureOnPost(p.ID)
+                        };
+                    }
+                }
+                catch
+                {
+                    return new PostItemPostTakeEnclosureResponse()
+                    {
+                        IsSuccess = false,
+                    };
+                }
+            }
+            return new PostItemPostTakeEnclosureResponse()
+            {
+                IsSuccess = false,
+            };
+        }
+        public class PostItemPostCleanupRequest
+        {
+        }
+        public class PostItemPostCleanupResponse
+        {
+            public bool IsSuccess { get; set; }
+        }
+        [Authorize]
+        [HttpPost("post/cleanup")]
+        public PostItemPostCleanupResponse PostItemPostCleanup(PostItemPostCleanupRequest p)
+        {
+            var claimaccountid = User.Claims.Where(c => c.Type == "AccountID").FirstOrDefault();
+            if (claimaccountid != null)
+            {
+                try
+                {
+                    var accguid = Guid.Parse(claimaccountid.Value);
+                    return new PostItemPostCleanupResponse()
+                    {
+                        IsSuccess = _itemmanager.CleanUpPostWhereIsReadAndIsTakenByAccountID(accguid),
+                    };
+                }
+                catch
+                {
+                    return new PostItemPostCleanupResponse()
+                    {
+                        IsSuccess = false,
+                    };
+                }
+            }
+            return new PostItemPostCleanupResponse()
             {
                 IsSuccess = false,
             };

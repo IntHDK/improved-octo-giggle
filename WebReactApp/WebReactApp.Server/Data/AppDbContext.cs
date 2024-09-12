@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WebReactApp.Server.ModelObjects.Identity.LoginMethod;
 using WebReactApp.Server.ModelObjects.Identity;
+using WebReactApp.Server.ModelObjects;
 
 namespace WebReactApp.Server.Data
 {

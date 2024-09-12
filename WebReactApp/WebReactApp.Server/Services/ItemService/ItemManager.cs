@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using WebReactApp.Server.Data;
+using WebReactApp.Server.ModelObjects;
 using WebReactApp.Server.ModelObjects.Identity;
 
 namespace WebReactApp.Server.Services.ItemService
@@ -26,6 +27,7 @@ namespace WebReactApp.Server.Services.ItemService
             }
         }
 
+        //사용자 아이템 추가 (단일)
         public bool AddAccountItem(Guid AccountID, AccountItem accountItem)
         {
             var tx = appDbContext.Database.BeginTransaction();
@@ -46,6 +48,16 @@ namespace WebReactApp.Server.Services.ItemService
                             break;
                         case AccountItemType.Item:
                         case AccountItemType.Item_Package:
+                            if (accountItem.Parameters.Count <= 0)
+                            {
+                                //파라메터 없는 아이템에 한해서 Quantity 겹치기
+                                var accent = curacc.AccountItems.Where(i => i.ItemMetaName == accountItem.ItemMetaName && i.ExpireAt == accountItem.ExpireAt).FirstOrDefault();
+                                if (accent != null)
+                                {
+                                    accent.Quantity += accountItem.Quantity; // 메타명과 만료기간이 같으면 Quantity를 증가
+                                    break;
+                                }
+                            }
                             var newitem = new AccountItem()
                             {
                                 Account = curacc,
@@ -72,6 +84,72 @@ namespace WebReactApp.Server.Services.ItemService
             }
             catch (Exception ex)
             {
+                tx.Rollback();
+                return false;
+            }
+            return true;
+        }
+
+        //사용자 아이템 추가(여러개)
+        public bool AddAccountItems(Guid AccountID, List<AccountItem> accountItems)
+        {
+            var tx = appDbContext.Database.BeginTransaction();
+            try
+            {
+                var curacc = appDbContext.Accounts.Include(a => a.AccountItems).Where(a => a.ID == AccountID).FirstOrDefault();
+                if (curacc != default)
+                {
+                    foreach(var accountItem in accountItems)
+                    {
+                        switch (accountItem.Type)
+                        {
+                            case AccountItemType.Currency_Cash:
+                                curacc.Currency_Cash += accountItem.Quantity;
+                                break;
+                            case AccountItemType.Currency_Point:
+                                curacc.Currency_Point += accountItem.Quantity;
+                                break;
+                            case AccountItemType.Item:
+                            case AccountItemType.Item_Package:
+                                if (accountItem.Parameters.Count <= 0)
+                                {
+                                    //파라메터 없는 아이템에 한해서 Quantity 겹치기
+                                    var accent = curacc.AccountItems.Where(i => i.ItemMetaName == accountItem.ItemMetaName && i.ExpireAt == accountItem.ExpireAt).FirstOrDefault();
+                                    if (accent != null)
+                                    {
+                                        accent.Quantity += accountItem.Quantity; // 메타명과 만료기간이 같으면 Quantity를 증가
+                                        break;
+                                    }
+                                }
+                                
+                                var newitem = new AccountItem()
+                                {
+                                    Account = curacc,
+                                    AccountID = curacc.ID,
+                                    ExpireAt = accountItem.ExpireAt,
+                                    CreatedTime = DateTime.Now,
+                                    ItemMetaName = accountItem.ItemMetaName,
+                                    Parameters = accountItem.Parameters.ToList(),
+                                    Quantity = accountItem.Quantity,
+                                    Type = accountItem.Type,
+                                };
+                                curacc.AccountItems.Add(accountItem);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+
+                    appDbContext.SaveChanges(); tx.Commit();
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
                 return false;
             }
             return true;

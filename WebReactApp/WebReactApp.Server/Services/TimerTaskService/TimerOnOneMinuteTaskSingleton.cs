@@ -1,10 +1,11 @@
-﻿using WebReactApp.Server.ModelObjects.Identity;
+﻿using WebReactApp.Server.ModelObjects;
+using WebReactApp.Server.ModelObjects.Identity;
 using WebReactApp.Server.Services.ItemService;
 using WebReactApp.Server.Services.MessageChannel;
 
 namespace WebReactApp.Server.Services.TimerTaskService
 {
-    //1분마다 특정 채널에 메세지 쏨
+    //1분마다 특정 채널에 메세지, 지정된 AccountPost (우편) 1개 발생
     public class TimerOnOneMinuteTaskSingleton : IDisposable
     {
         private readonly MessageChannelSingleton messageChannelSingleton;
@@ -25,7 +26,7 @@ namespace WebReactApp.Server.Services.TimerTaskService
                 while (active)
                 {
                     var aftertimestamp = DateTime.Now;
-                    if (prevtimestamp.Minute != aftertimestamp.Minute) //분침이 바뀜
+                    if (aftertimestamp - prevtimestamp >= TimeSpan.FromMinutes(1)) //1분 간격
                     {
                         Console.WriteLine("Minute event triggered!");
                         messageChannelSingleton.SendMessageToChannel("notice_minutely", new MessageChannelSingleton.Message()
