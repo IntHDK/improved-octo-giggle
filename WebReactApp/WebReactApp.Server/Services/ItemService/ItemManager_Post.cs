@@ -19,6 +19,32 @@ namespace WebReactApp.Server.Services.ItemService
                 return [];
             }
         }
+        public AccountPost? GetPostByPostID(Guid PostID)
+        {
+            var curent = appDbContext.AccountPosts.Where(a => a.ID == PostID).FirstOrDefault();
+            if (curent != default)
+            {
+                return curent;
+            }
+            else
+            {
+                return null;
+            }
+        }
+        public bool MarkAsReadPostByPostID(Guid PostID)
+        {
+            var curent = appDbContext.AccountPosts.Where(a => a.ID == PostID).FirstOrDefault();
+            if (curent != default)
+            {
+                curent.IsRead = true;
+                appDbContext.SaveChanges();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
         public bool AddPostByAccountCondition(AccountPost PostTemplate, Expression<Func<Account, bool>> conditionexpression)
         {
             List<AccountPostEnclosure> enclosures = new List<AccountPostEnclosure>();

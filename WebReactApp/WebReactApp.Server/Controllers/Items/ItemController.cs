@@ -88,17 +88,19 @@ namespace WebReactApp.Server.Controllers.Items
             return new GetItemMyCurrencyResponse();
         }
 
-        public class GetItemMyPostListResponse_AccountPost
+        //TODO: swagger 자동인식 붙여놨더니 class in class 썼을 때 에러생긴다
+        //DB Model을 그대로 붙여썼더니 순환참조로 json 파싱이 불가 주의
+        public class GetItemPostIndexResponse_AccountPost
         {
             public Guid ID { get; set; }
             public DateTime CreatedTime { get; set; }
             public string Context { get; set; }
             public DateTime ExpireAt { get; set; }
-            public List<GetItemMyPostListResponse_AccountPostEnclosure> Enclosures { get; set; }
+            public List<GetItemPostIndexResponse_AccountPostEnclosure> Enclosures { get; set; }
             public bool IsRead { get; set; }
             public bool IsEnclosureTaken { get; set; }
         }
-        public class GetItemMyPostListResponse_AccountPostEnclosure
+        public class GetItemPostIndexResponse_AccountPostEnclosure
         {
             public Guid ID { get; set; }
             public DateTime CreatedTime { get; set; }
@@ -106,9 +108,9 @@ namespace WebReactApp.Server.Controllers.Items
             public string ItemMetaName { get; set; }
             public DateTime ExpireAt { get; set; }
             public int Quantity { get; set; }
-            public List<GetItemMyPostListResponse_AccountPostEnclosureItemParameter> Parameters { get; set; }
+            public List<GetItemPostIndexResponse_AccountPostEnclosureItemParameter> Parameters { get; set; }
         }
-        public class GetItemMyPostListResponse_AccountPostEnclosureItemParameter
+        public class GetItemPostIndexResponse_AccountPostEnclosureItemParameter
         {
             public Guid ID { get; set; }
             public string ParamName { get; set; }
@@ -116,13 +118,13 @@ namespace WebReactApp.Server.Controllers.Items
             public int NumberValue { get; set; }
             public string StringValue { get; set; }
         }
-        public class GetItemMyPostListResponse
+        public class GetItemPostIndexResponse
         {
-            public List<GetItemMyPostListResponse_AccountPost> AccountPosts { get; set; }
+            public List<GetItemPostIndexResponse_AccountPost> AccountPosts { get; set; }
         }
         [Authorize]
         [HttpGet("post")]
-        public GetItemMyPostListResponse GetItemMyPostList()
+        public GetItemPostIndexResponse GetItemPostIndex()
         {
             var claimaccountid = User.Claims.Where(c => c.Type == "AccountID").FirstOrDefault();
             if (claimaccountid != null)
@@ -133,20 +135,20 @@ namespace WebReactApp.Server.Controllers.Items
                     var postinfo = _itemmanager.GetNotExpiredAccountPostsByAccountID(accguid);
                     if (postinfo != null)
                     {
-                        List<GetItemMyPostListResponse_AccountPost> accountPosts = [];
+                        List<GetItemPostIndexResponse_AccountPost> accountPosts = [];
                         postinfo.ForEach((p) =>
                         {
-                            var enclosures = new List<GetItemMyPostListResponse_AccountPostEnclosure>();
+                            var enclosures = new List<GetItemPostIndexResponse_AccountPostEnclosure>();
                             if (p.AccountPostenclosure != null)
                             {
                                 p.AccountPostenclosure.ForEach((e) =>
                                 {
-                                    var parameters = new List<GetItemMyPostListResponse_AccountPostEnclosureItemParameter>();
+                                    var parameters = new List<GetItemPostIndexResponse_AccountPostEnclosureItemParameter>();
                                     if (e.Parameters != null)
                                     {
                                         e.Parameters.ForEach((p) =>
                                         {
-                                            parameters.Add(new GetItemMyPostListResponse_AccountPostEnclosureItemParameter()
+                                            parameters.Add(new GetItemPostIndexResponse_AccountPostEnclosureItemParameter()
                                             {
                                                 ID = p.ID,
                                                 Index = p.Index,
@@ -156,7 +158,7 @@ namespace WebReactApp.Server.Controllers.Items
                                             });
                                         });
                                     }
-                                    enclosures.Add(new GetItemMyPostListResponse_AccountPostEnclosure()
+                                    enclosures.Add(new GetItemPostIndexResponse_AccountPostEnclosure()
                                     {
                                         CreatedTime = e.CreatedTime,
                                         ExpireAt = e.ExpireAt,
@@ -168,7 +170,7 @@ namespace WebReactApp.Server.Controllers.Items
                                     });
                                 });
                             }
-                            accountPosts.Add(new GetItemMyPostListResponse_AccountPost
+                            accountPosts.Add(new GetItemPostIndexResponse_AccountPost
                             {
                                 ID = p.ID,
                                 Context = p.Context,
@@ -179,19 +181,63 @@ namespace WebReactApp.Server.Controllers.Items
                                 IsEnclosureTaken = p.IsEnclosureTaken,
                             });
                         });
-                        return new GetItemMyPostListResponse { AccountPosts = accountPosts };
+                        return new GetItemPostIndexResponse { AccountPosts = accountPosts };
                     }
                     else
                     {
-                        return new GetItemMyPostListResponse();
+                        return new GetItemPostIndexResponse();
                     }
                 }
                 catch
                 {
-                    return new GetItemMyPostListResponse();
+                    return new GetItemPostIndexResponse();
                 }
             }
-            return new GetItemMyPostListResponse();
+            return new GetItemPostIndexResponse();
+        }
+
+        public class PostItemPostOpenRequest
+        {
+            public Guid ID { get; set; }
+        }
+        public class PostItemPostOpenResponse {
+            public bool IsSuccess { get; set; }
+        }
+        [Authorize]
+        [HttpPost("post/open")]
+        public PostItemPostOpenResponse PostItemPostOpen(PostItemPostOpenRequest p)
+        {
+            var claimaccountid = User.Claims.Where(c => c.Type == "AccountID").FirstOrDefault();
+            if (claimaccountid != null)
+            {
+                try
+                {
+                    var accguid = Guid.Parse(claimaccountid.Value);
+                    var postinfo = _itemmanager.GetPostByPostID(p.ID);
+                    if (postinfo != null)
+                    {
+                        if (postinfo.AccountID != accguid)
+                        {
+                            return new PostItemPostOpenResponse()
+                            {
+                                IsSuccess = false,
+                            };
+                        }
+
+                    }
+                }
+                catch
+                {
+                    return new PostItemPostOpenResponse()
+                    {
+                        IsSuccess = false,
+                    };
+                }
+            }
+            return new PostItemPostOpenResponse()
+            {
+                IsSuccess = false,
+            };
         }
     }
 }
