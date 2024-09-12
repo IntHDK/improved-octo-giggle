@@ -125,6 +125,9 @@ namespace WebReactApp.Server.Controllers.Identity
         {
             var claimaccountid = User.Claims.Where(c => c.Type == "AccountID").FirstOrDefault();
             var claimnickname = User.Claims.Where(c => c.Type == "NickName").FirstOrDefault();
+
+
+
             return new GetIndexResponse
             {
                 AccountID = claimaccountid?.Value ?? "",

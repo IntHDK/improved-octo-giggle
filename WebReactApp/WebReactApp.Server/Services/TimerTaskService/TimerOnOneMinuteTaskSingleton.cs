@@ -1,4 +1,6 @@
-﻿using WebReactApp.Server.Services.MessageChannel;
+﻿using WebReactApp.Server.ModelObjects.Identity;
+using WebReactApp.Server.Services.ItemService;
+using WebReactApp.Server.Services.MessageChannel;
 
 namespace WebReactApp.Server.Services.TimerTaskService
 {
@@ -6,10 +8,13 @@ namespace WebReactApp.Server.Services.TimerTaskService
     public class TimerOnOneMinuteTaskSingleton : IDisposable
     {
         private readonly MessageChannelSingleton messageChannelSingleton;
+        private readonly IServiceScopeFactory serviceScopeFactory;
         private bool active = false;
-        public TimerOnOneMinuteTaskSingleton(MessageChannelSingleton messageChannelSingleton)
+        public TimerOnOneMinuteTaskSingleton(
+            MessageChannelSingleton messageChannelSingleton, IServiceScopeFactory serviceScopeFactory)
         {
             this.messageChannelSingleton = messageChannelSingleton;
+            this.serviceScopeFactory = serviceScopeFactory;
         }
         public void Start()
         {
@@ -22,12 +27,48 @@ namespace WebReactApp.Server.Services.TimerTaskService
                     var aftertimestamp = DateTime.Now;
                     if (prevtimestamp.Minute != aftertimestamp.Minute) //분침이 바뀜
                     {
+                        Console.WriteLine("Minute event triggered!");
                         messageChannelSingleton.SendMessageToChannel("notice_minutely", new MessageChannelSingleton.Message()
                         {
                             ControlType = MessageChannelSingleton.MessageControlType.PlainMessage,
                             CreateTime = DateTime.Now,
                             Owner = "",
                             Text = DateTime.Now.ToString()
+                        });
+                        Task.Run(() =>
+                        {
+                            using (var scope = serviceScopeFactory.CreateScope())
+                            {
+                                var itemman = scope.ServiceProvider.GetRequiredService<ItemManager>();
+                                if (itemman != null)
+                                {
+                                    itemman.AddPostByAccountCondition(new AccountPost()
+                                    {
+                                        Context = DateTime.Now.ToString() + " Post",
+                                        AccountPostenclosure = [
+                                        new AccountPostEnclosure(){
+                                            ID = Guid.NewGuid(),
+                                            CreatedTime = DateTime.Now,
+                                            ItemMetaName = "Test01",
+                                            Quantity = 1,
+                                            Parameters = [],
+                                            ExpireAt = DateTime.MaxValue,
+                                            Type = AccountItemType.Item,
+                                        },
+                                        new AccountPostEnclosure(){
+                                            ID = Guid.NewGuid(),
+                                            CreatedTime= DateTime.Now,
+                                            ItemMetaName = "",
+                                            Quantity = 100,
+                                            Type = AccountItemType.Currency_Point,
+                                            Parameters = [],
+                                            ExpireAt = DateTime.MaxValue,
+                                        }
+                                        ],
+                                        ExpireAt = DateTime.Now.AddMinutes(30),
+                                    }, (a => true));
+                                }
+                            }
                         });
                     }
                     prevtimestamp = aftertimestamp;

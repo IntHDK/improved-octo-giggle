@@ -75,7 +75,8 @@ namespace WebReactApp.Server.Services.IdentityService
             {
                 Account newaccount = new Account
                 {
-                    CreatedTime = DateTime.UtcNow,
+                    CreatedTime = DateTime.Now,
+                    LastLoginTime = DateTime.Now,
                     NickName = nickname,
                     Email = email,
                     IsConfirmed = false,
@@ -178,7 +179,7 @@ namespace WebReactApp.Server.Services.IdentityService
                                 {
                                     Account = curacc,
                                     AccountID = curacc.ID,
-                                    CreatedTime = DateTime.UtcNow,
+                                    CreatedTime = DateTime.Now,
                                     PasswordHash = hashedpassword,
                                     PasswordItr = itr,
                                     PasswordMethod = hashmethod,
@@ -237,6 +238,8 @@ namespace WebReactApp.Server.Services.IdentityService
                             if (tokenSingleton.CreateToken(method.AccountID, DateTime.UtcNow.Add(TokenLifetime),
                                 out _, out sessiontoken))
                             {
+                                account.LastLoginTime = DateTime.Now;
+                                appDbContext.SaveChanges();
                                 return true;
                             }
                         }
@@ -259,7 +262,7 @@ namespace WebReactApp.Server.Services.IdentityService
                     {
                         curacc.Roles.Add(new AccountRole
                         {
-                            CreatedTime = DateTime.UtcNow,
+                            CreatedTime = DateTime.Now,
                             Role = role
                         });
                     }

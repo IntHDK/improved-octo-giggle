@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebReactApp.Server.Data;
 
@@ -11,31 +12,18 @@ using WebReactApp.Server.Data;
 namespace WebReactApp.Server.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240912112741_v00005")]
+    partial class v00005
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "8.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
-
-            modelBuilder.Entity("AccountPostAccountPostEnclosure", b =>
-                {
-                    b.Property<Guid>("AccountPostID")
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("AccountPostenclosureID")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("AccountPostID", "AccountPostenclosureID");
-
-                    b.HasIndex("AccountPostenclosureID");
-
-                    b.ToTable("AccountPostAccountPostEnclosure");
-                });
 
             modelBuilder.Entity("WebReactApp.Server.ModelObjects.Identity.Account", b =>
                 {
@@ -58,9 +46,6 @@ namespace WebReactApp.Server.Migrations
 
                     b.Property<bool>("IsConfirmed")
                         .HasColumnType("tinyint(1)");
-
-                    b.Property<DateTime>("LastLoginTime")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("NickName")
                         .IsRequired()
@@ -107,6 +92,9 @@ namespace WebReactApp.Server.Migrations
                     b.Property<Guid?>("AccountID")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("AccountPostID")
+                        .HasColumnType("char(36)");
+
                     b.Property<DateTime>("CreatedTime")
                         .HasColumnType("datetime(6)");
 
@@ -126,6 +114,8 @@ namespace WebReactApp.Server.Migrations
                     b.HasKey("ID");
 
                     b.HasIndex("AccountID");
+
+                    b.HasIndex("AccountPostID");
 
                     b.ToTable("AccountItems");
                 });
@@ -190,63 +180,6 @@ namespace WebReactApp.Server.Migrations
                     b.HasIndex("AccountID");
 
                     b.ToTable("AccountPosts");
-                });
-
-            modelBuilder.Entity("WebReactApp.Server.ModelObjects.Identity.AccountPostEnclosure", b =>
-                {
-                    b.Property<Guid>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("CreatedTime")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<DateTime>("ExpireAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("ItemMetaName")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("int");
-
-                    b.HasKey("ID");
-
-                    b.ToTable("AccountPostEnclosures");
-                });
-
-            modelBuilder.Entity("WebReactApp.Server.ModelObjects.Identity.AccountPostEnclosureItemParameter", b =>
-                {
-                    b.Property<Guid>("ID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<Guid>("AccountPostEnclosureID")
-                        .HasColumnType("char(36)");
-
-                    b.Property<int>("Index")
-                        .HasColumnType("int");
-
-                    b.Property<int>("NumberValue")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ParamName")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("StringValue")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
-                    b.HasKey("ID");
-
-                    b.HasIndex("AccountPostEnclosureID");
-
-                    b.ToTable("AccountPostEnclosuresItemParameters");
                 });
 
             modelBuilder.Entity("WebReactApp.Server.ModelObjects.Identity.AccountRole", b =>
@@ -318,21 +251,6 @@ namespace WebReactApp.Server.Migrations
                     b.ToTable("UsernamePasswordMethods");
                 });
 
-            modelBuilder.Entity("AccountPostAccountPostEnclosure", b =>
-                {
-                    b.HasOne("WebReactApp.Server.ModelObjects.Identity.AccountPost", null)
-                        .WithMany()
-                        .HasForeignKey("AccountPostID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("WebReactApp.Server.ModelObjects.Identity.AccountPostEnclosure", null)
-                        .WithMany()
-                        .HasForeignKey("AccountPostenclosureID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("WebReactApp.Server.ModelObjects.Identity.AccountConfirmTicket", b =>
                 {
                     b.HasOne("WebReactApp.Server.ModelObjects.Identity.Account", "Account")
@@ -349,6 +267,10 @@ namespace WebReactApp.Server.Migrations
                     b.HasOne("WebReactApp.Server.ModelObjects.Identity.Account", "Account")
                         .WithMany("AccountItems")
                         .HasForeignKey("AccountID");
+
+                    b.HasOne("WebReactApp.Server.ModelObjects.Identity.AccountPost", null)
+                        .WithMany("Enclosures")
+                        .HasForeignKey("AccountPostID");
 
                     b.Navigation("Account");
                 });
@@ -373,17 +295,6 @@ namespace WebReactApp.Server.Migrations
                         .IsRequired();
 
                     b.Navigation("Account");
-                });
-
-            modelBuilder.Entity("WebReactApp.Server.ModelObjects.Identity.AccountPostEnclosureItemParameter", b =>
-                {
-                    b.HasOne("WebReactApp.Server.ModelObjects.Identity.AccountPostEnclosure", "AccountPostEnclosure")
-                        .WithMany("Parameters")
-                        .HasForeignKey("AccountPostEnclosureID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("AccountPostEnclosure");
                 });
 
             modelBuilder.Entity("WebReactApp.Server.ModelObjects.Identity.AccountRole", b =>
@@ -421,9 +332,9 @@ namespace WebReactApp.Server.Migrations
                     b.Navigation("Parameters");
                 });
 
-            modelBuilder.Entity("WebReactApp.Server.ModelObjects.Identity.AccountPostEnclosure", b =>
+            modelBuilder.Entity("WebReactApp.Server.ModelObjects.Identity.AccountPost", b =>
                 {
-                    b.Navigation("Parameters");
+                    b.Navigation("Enclosures");
                 });
 #pragma warning restore 612, 618
         }

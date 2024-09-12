@@ -6,8 +6,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using WebReactApp.Server.Data;
+using WebReactApp.Server.Services.AccountService;
 using WebReactApp.Server.Services.Authentication;
 using WebReactApp.Server.Services.IdentityService;
+using WebReactApp.Server.Services.ItemService;
 using WebReactApp.Server.Services.MessageChannel;
 using WebReactApp.Server.Services.TimerTaskService;
 
@@ -34,11 +36,14 @@ namespace WebReactApp.Server
             var builder = WebApplication.CreateBuilder(args);
             var dbconf = builder.Configuration.GetSection("Database").Get<Configuration_Database>();
             var initmasterconf = builder.Configuration.GetSection("InitialMaster").Get<Configuration_InitialMaster>();
+
+            //DB 설정 관련 : Mysql의 경우 local_infile 활성화 필요 (벌크작업용)
+
             if (dbconf == null)
             {
                 dbconf = new Configuration_Database()
                 {
-                    ConnectionString = "Server=localhost;Database='improved_octo_giggle';Uid='octo-giggle';Pwd='octo-giggle';"
+                    ConnectionString = "Server=localhost;Database='improved_octo_giggle';Uid='octo-giggle';Pwd='octo-giggle';AllowLoadLocalInfile=true;"
                 };
             }
 
@@ -63,7 +68,9 @@ namespace WebReactApp.Server
             builder.Services.AddSingleton<IdentityTokenSingleton>();
             builder.Services.AddSingleton<MessageChannelSingleton>();
             builder.Services.AddSingleton<TimerOnOneMinuteTaskSingleton>();
+            builder.Services.AddScoped<AccountService>();
             builder.Services.AddScoped<IdentityService>();
+            builder.Services.AddScoped<ItemManager>();
 
             builder.Services.AddHttpContextAccessor();
             builder.Services.AddTransient<ClaimsPrincipal>(s => s.GetService<IHttpContextAccessor>().HttpContext.User);
